@@ -136,7 +136,7 @@ run_modules() {
 static void *
 test_reconfig(void *) {
 	int s = 0, err;
-	int kbitrate[] = { 2000, 8000 };
+	int kbitrate[] = { 3000, 100 };
 	int framerate[][2] = { { 12, 1 }, {30, 1}, {24, 1} };
 	ga_error("reconfigure thread started ...\n");
 	while(1) {
@@ -152,17 +152,18 @@ test_reconfig(void *) {
 #ifdef WIN32
 		Sleep(20 * 1000);
 #else
-		sleep(20);
+		sleep(3);
 #endif
 		bzero(&reconf, sizeof(reconf));
 		reconf.id = 0;
-#if 0
 		reconf.bitrateKbps = kbitrate[s%2];
+#if 0
 		reconf.bufsize = 5 * kbitrate[s%2] / 24;
 #endif
-		reconf.framerate_n = framerate[s%3][0];
-		reconf.framerate_d = framerate[s%3][1];
+		// reconf.framerate_n = framerate[s%3][0];
+		// reconf.framerate_d = framerate[s%3][1];
 		// vsource
+		/*
 		if(m_vsource->ioctl) {
 			err = m_vsource->ioctl(GA_IOCTL_RECONFIGURE, sizeof(reconf), &reconf);
 			if(err < 0) {
@@ -172,6 +173,7 @@ test_reconfig(void *) {
 						reconf.framerate_n, reconf.framerate_d);
 			}
 		}
+		*/
 		// encoder
 		if(m_vencoder->ioctl) {
 			err = m_vencoder->ioctl(GA_IOCTL_RECONFIGURE, sizeof(reconf), &reconf);
@@ -189,6 +191,20 @@ test_reconfig(void *) {
 }
 #endif
 
+void
+handle_netreport(ctrlmsg_system_t *msg) {
+	ctrlmsg_system_netreport_t *msgn = (ctrlmsg_system_netreport_t*) msg;
+	ga_error("net-report: capacity=%.3f Kbps; loss-rate=%.2f%% (%u/%u); overhead=%.2f [%u KB received in %.3fs (%.2fKB/s)]\n",
+		msgn->capacity / 1024.0,
+		100.0 * msgn->pktloss / msgn->pktcount,
+		msgn->pktloss, msgn->pktcount,
+		1.0 * msgn->pktcount / msgn->framecount,
+		msgn->bytecount / 1024,
+		msgn->duration / 1000000.0,
+		msgn->bytecount / 1024.0 / (msgn->duration / 1000000.0));
+	return;
+}
+
 int
 main(int argc, char *argv[]) {
 	int notRunning = 0;
@@ -197,6 +213,7 @@ main(int argc, char *argv[]) {
 		fprintf(stderr, "cannot initialize COM.\n");
 		return -1;
 	}
+	ga_set_process_dpi_aware();
 #endif
 	//
 	if(argc < 2) {
@@ -226,6 +243,9 @@ main(int argc, char *argv[]) {
 	if(load_modules() < 0)	 	{ return -1; }
 	if(init_modules() < 0)	 	{ return -1; }
 	if(run_modules() < 0)	 	{ return -1; }
+	// enable handler to monitored network status
+	ctrlsys_set_handler(CTRL_MSGSYS_SUBTYPE_NETREPORT, handle_netreport);
+	//
 #ifdef TEST_RECONFIGURE
 	pthread_t t;
 	pthread_create(&t, NULL, test_reconfig, NULL);

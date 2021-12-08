@@ -32,6 +32,10 @@
 #include <android/log.h>
 #endif
 
+#ifdef __APPLE__
+#include <TargetConditionals.h>
+#endif
+
 #if defined WIN32 && defined GA_LIB
 /** Functions exported from DLL's */
 #define	EXPORT __declspec(dllexport)
@@ -96,6 +100,8 @@ EXPORT int	ga_save_close(FILE *fp);
 // aggregated output feature
 EXPORT void	ga_aggregated_reset();
 EXPORT void	ga_aggregated_print(int key, int limit, int value);
+// encoders or decoders would require this
+EXPORT unsigned char * ga_find_startcode(unsigned char *buf, unsigned char *end, int *startcode_len);
 //
 EXPORT long	ga_atoi(const char *str);
 EXPORT struct gaRect * ga_fillrect(struct gaRect *rect, int left, int top, int right, int bottom);
@@ -106,5 +112,11 @@ EXPORT void	ga_dummyfunc();
 EXPORT const char * ga_lookup_mime(const char *key);
 EXPORT const char ** ga_lookup_ffmpeg_decoders(const char *key);
 EXPORT enum AVCodecID ga_lookup_codec_id(const char *key);
+
+EXPORT void	pthread_cancel_init();
+#ifdef ANDROID
+#include <pthread.h>
+EXPORT int	pthread_cancel(pthread_t thread);
+#endif
 
 #endif
