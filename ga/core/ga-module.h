@@ -54,7 +54,8 @@ enum ga_ioctl_commands {
 	GA_IOCTL_RECONFIGURE,		/**< Reconfiguration */
 	GA_IOCTL_GETSPS = 0x100,	/**< Get SPS: for H.264 and H.265 */
 	GA_IOCTL_GETPPS,		/**< Get PPS: for H.264 and H.265 */
-	GA_IOCTL_GETVPS			/**< Get VPS: for H.265 */
+	GA_IOCTL_GETVPS,		/**< Get VPS: for H.265 */
+	GA_IOCTL_CUSTOM = 0x40000000	/**< For user customization */
 };
 
 /**
@@ -92,6 +93,8 @@ typedef struct ga_ioctl_reconfigure_s {
 	int framerate_d;	/**< Framerate denominator */
 	int bitrateKbps;	/**< bitrate in Kbit-per-second. Affects both bitrate and vbv-maxrate */
 	int bufsize;		/**< vbv-bufsize */
+	int width;		/**< Width */
+	int height;		/**< Height */
 }	ga_ioctl_reconfigure_t;
 
 #ifdef __cplusplus
