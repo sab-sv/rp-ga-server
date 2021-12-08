@@ -44,10 +44,8 @@ liveserver_main(void *arg) {
 	encoder_pktqueue_init(VIDEO_SOURCE_CHANNEL_MAX+1, 3 * 1024* 1024/*3MB*/);
 	//
 	ServerMediaSession * sms
-		= ServerMediaSession::createNew(*env,
-				rtspconf->object[0] ? &rtspconf->object[1] : "ga",
-				rtspconf->object[0] ? &rtspconf->object[1] : "ga",
-				rtspconf->title[0] ? rtspconf->title : "GamingAnywhere Server");
+		= ServerMediaSession::createNew(*env, "desktop", "desktop", 
+				"GamingAnywhere Server");
 	//
 	qos_server_init();
 	// add video session

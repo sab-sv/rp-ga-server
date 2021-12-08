@@ -43,8 +43,6 @@
 #endif
 #elif defined __APPLE__
 #include "ga-osx.h"
-#elif defined ANDROID
-#include "ga-androidvideo.h"
 #else
 #include "ga-xwin.h"
 #endif
@@ -127,12 +125,8 @@ vsource_init(void *arg) {
 		ga_error("Mac OS X capture init failed.\n");
 		return -1;
 	}
-#elif defined ANDROID
-	if(ga_androidvideo_init(image) < 0) {
-		ga_error("Android capture init failed.\n");
-		return -1;
-	}
 #else
+	//if(ga_xwin_init(rtspconf->display, &display, &rootWindow, &image) < 0) {
 	if(ga_xwin_init(rtspconf->display, image) < 0) {
 		ga_error("XWindow capture init failed.\n");
 		return -1;
@@ -240,9 +234,9 @@ vsource_threadproc(void *arg) {
 		data = dpipe_get(pipe[0]);
 		frame = (vsource_frame_t*) data->pointer;
 #ifdef __APPLE__
-		frame->pixelformat = AV_PIX_FMT_RGBA;
+		frame->pixelformat = PIX_FMT_RGBA;
 #else
-		frame->pixelformat = AV_PIX_FMT_BGRA;
+		frame->pixelformat = PIX_FMT_BGRA;
 #endif
 		if(prect == NULL) {
 		////////////////////////////////////////
@@ -270,8 +264,6 @@ vsource_threadproc(void *arg) {
 	#endif
 #elif defined __APPLE__
 		ga_osx_capture((char*) frame->imgbuf, frame->imgbufsize, prect);
-#elif defined ANDROID
-		ga_androidvideo_capture((char*) frame->imgbuf, frame->imgbufsize);
 #else // X11
 		ga_xwin_capture((char*) frame->imgbuf, frame->imgbufsize, prect);
 #endif
@@ -328,8 +320,6 @@ vsource_deinit(void *arg) {
 	CoUninitialize();
 #elif defined __APPLE__
 	ga_osx_deinit();
-#elif defined ANDROID
-	ga_androidvideo_deinit();
 #else
 	//ga_xwin_deinit(display, image);
 	ga_xwin_deinit();

@@ -6,11 +6,7 @@ LDFLAGS	= $(EXTRALDFLAGS) -L../core -lga $(AVCLD) $(SDLLD) $(L5LD) -Wl,-rpath,\$
 
 ifeq ($(OS), Linux)
 CFLAGS	+= $(X11CF)
-LDFLAGS	+= $(X11LD) -lrt -lpthread
-endif
-
-ifeq ($(OS), MSYS)
-LDFLAGS	+= -lws2_32
+LDFLAGS	+= $(X11LD) -lrt
 endif
 
 ifeq ($(OS), Darwin)
@@ -22,7 +18,7 @@ TARGET	= ga-client
 all: $(TARGET)
 
 .cpp.o:
-	$(CXX) -c -g $(CXXFLAGS) $<
+	$(CXX) -c -g $(CFLAGS) $<
 
 ga-client: ga-client.o rtspclient.o ctrl-sdl.o minih264.o minivp8.o qosreport.o
 	$(CXX) -o $@ $^ $(LDFLAGS)

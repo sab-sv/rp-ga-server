@@ -485,10 +485,8 @@ tcp_again:
 				continue;
 			}
 		}
-		// handle message
-		if(ctrlsys_handle_message(buf+bufhead, msglen) != 0) {
-			// message has been handeled, do nothing
-		} else if(replay != NULL) {
+		// replay or queue the event
+		if(replay != NULL) {
 			replay(buf+bufhead, msglen);
 		} else if(ctrl_queue_write_msg(buf+bufhead, msglen) != msglen) {
 			ga_error("controller server: queue full, message dropped.\n");

@@ -79,10 +79,8 @@
 #define	getpid			_getpid
 #endif
 // gmtimr_r
-#if !defined(MSYS)
 #ifndef gmtime_r
 #define	gmtime_r(pt,ptm)	gmtime_s(ptm,pt)	/**< Mapping gmtime_r() to gmtime_s() */
-#endif
 #endif
 // dlopen
 #ifndef dlopen
@@ -117,8 +115,6 @@ EXPORT char *dlerror();
 
 EXPORT void ga_win32_fill_bitmap_info(BITMAPINFO *pinfo, int w, int h, int bitsPerPixel);
 EXPORT long long pcdiff_us(LARGE_INTEGER t1, LARGE_INTEGER t2, LARGE_INTEGER freq);
-
-EXPORT int ga_set_process_dpi_aware();
 
 #endif	/* USE_GA_WIN32_MACRO */
 /////////////////////////////////////////////////////////////////////////

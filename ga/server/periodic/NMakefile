@@ -17,8 +17,8 @@ ga-server-periodic.exe: ga-server-periodic.obj
 #	link /out:$@ $(LDFLAGS) $**
 
 install:
-	-mkdir ..\..\..\bin.$(GA_WINSYS)
-	copy /y $(TARGET) ..\..\..\bin.$(GA_WINSYS)
+	-mkdir ..\..\..\bin
+	copy /y $(TARGET) ..\..\..\bin
 
 clean:
 	-del /f /q $(TARGET) *.obj *~

@@ -91,30 +91,30 @@ filter_RGB2YUV_init(void *arg) {
 		if(ga_conf_readv("filter-source-pixelformat", pixelfmt, sizeof(pixelfmt)) != NULL) {
 			if(strcasecmp("rgba", pixelfmt) == 0) {
 				swsctx = create_frame_converter(
-						inputW, inputH, AV_PIX_FMT_RGBA,
-						outputW, outputH, AV_PIX_FMT_YUV420P);
+						inputW, inputH, PIX_FMT_RGBA,
+						outputW, outputH, PIX_FMT_YUV420P);
 				ga_error("RGB2YUV filter: RGBA source specified.\n");
 			} else if(strcasecmp("bgra", pixelfmt) == 0) {
 				swsctx = create_frame_converter(
-						inputW, inputH, AV_PIX_FMT_BGRA,
-						outputW, outputH, AV_PIX_FMT_YUV420P);
+						inputW, inputH, PIX_FMT_BGRA,
+						outputW, outputH, PIX_FMT_YUV420P);
 				ga_error("RGB2YUV filter: BGRA source specified.\n");
 			} else if(strcasecmp("yuv420p", pixelfmt) == 0) {
 				swsctx = create_frame_converter(
-						inputW, inputH, AV_PIX_FMT_YUV420P,
-						outputW, outputH, AV_PIX_FMT_YUV420P);
+						inputW, inputH, PIX_FMT_YUV420P,
+						outputW, outputH, PIX_FMT_YUV420P);
 				ga_error("RGB2YUV filter: YUV source specified.\n");
 			}
 		}
 		if(swsctx == NULL) {
 #ifdef __APPLE__
 			swsctx = create_frame_converter(
-					inputW, inputH, AV_PIX_FMT_RGBA,
-					outputW, outputH, AV_PIX_FMT_YUV420P);
+					inputW, inputH, PIX_FMT_RGBA,
+					outputW, outputH, PIX_FMT_YUV420P);
 #else
 			swsctx = create_frame_converter(
-					inputW, inputH, AV_PIX_FMT_BGRA,
-					outputW, outputH, AV_PIX_FMT_YUV420P);
+					inputW, inputH, PIX_FMT_BGRA,
+					outputW, outputH, PIX_FMT_YUV420P);
 #endif
 		}
 		if(swsctx == NULL) {
@@ -227,7 +227,7 @@ filter_RGB2YUV_threadproc(void *arg) {
 		// basic info
 		dstframe->imgpts = srcframe->imgpts;
 		dstframe->timestamp = srcframe->timestamp;
-		dstframe->pixelformat = AV_PIX_FMT_YUV420P;	//yuv420p;
+		dstframe->pixelformat = PIX_FMT_YUV420P;	//yuv420p;
 		dstframe->realwidth = outputW;
 		dstframe->realheight = outputH;
 		dstframe->realstride = outputW;
@@ -236,32 +236,29 @@ filter_RGB2YUV_threadproc(void *arg) {
 		swsctx = lookup_frame_converter(
 				srcframe->realwidth,
 				srcframe->realheight,
-				srcframe->pixelformat,
-				dstframe->realwidth,
-				dstframe->realheight,
-				dstframe->pixelformat);
+				srcframe->pixelformat);
 		if(swsctx == NULL) {
 			swsctx = create_frame_converter(
 				srcframe->realwidth,
 				srcframe->realheight,
 				srcframe->pixelformat,
-				dstframe->realwidth,
-				dstframe->realheight,
-				dstframe->pixelformat);
+				outputW,
+				outputH,
+				PIX_FMT_YUV420P);
 		}
 		if(swsctx == NULL) {
 			ga_error("RGB2YUV filter: fatal - cannot create frame converter (%d,%d,%d)->(%x,%d,%d)\n",
 				srcframe->realwidth, srcframe->realheight, srcframe->pixelformat,
-				dstframe->realwidth, dstframe->realheight, dstframe->pixelformat);
+				outputW, outputH, PIX_FMT_YUV420P);
 		}
 		//
-		if(srcframe->pixelformat == AV_PIX_FMT_RGBA
-		|| srcframe->pixelformat == AV_PIX_FMT_BGRA/*rgba*/) {
+		if(srcframe->pixelformat == PIX_FMT_RGBA
+		|| srcframe->pixelformat == PIX_FMT_BGRA/*rgba*/) {
 			src[0] = srcframe->imgbuf;
 			src[1] = NULL;
 			srcstride[0] = srcframe->realstride; //srcframe->stride;
 			srcstride[1] = 0;
-		} else if(srcframe->pixelformat == AV_PIX_FMT_YUV420P) {
+		} else if(srcframe->pixelformat == PIX_FMT_YUV420P) {
 			src[0] = srcframe->imgbuf;
 			src[1] = src[0] + ((srcframe->realwidth * srcframe->realheight));
 			src[2] = src[1] + ((srcframe->realwidth * srcframe->realheight)>>2);
@@ -338,7 +335,6 @@ filter_RGB2YUV_start(void *arg) {
 		snprintf(params[iid][1], MAXPARAMLEN, filterpipe[1], iid);
 		filter_param[iid][0] = params[iid][0];
 		filter_param[iid][1] = params[iid][1];
-		pthread_cancel_init();
 		if(pthread_create(&filter_tid[iid], NULL, filter_RGB2YUV_threadproc, filter_param[iid]) != 0) {
 			filter_started = 0;
 			ga_error("filter RGB2YUV: create thread failed.\n");

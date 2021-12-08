@@ -310,92 +310,6 @@ encoder_send_packet(const char *prefix, int channelId, AVPacket *pkt, int64_t en
 	return -1;
 }
 
-// encoder pts to ptv mapping function
-#define	MAX_PTS_QUEUE	8
-static list<encoder_pts_t> pts_queue[MAX_PTS_QUEUE];	// up to 8 queues
-
-/**
- * Clear all pts records in a pts queue.
- *
- * @param queueid [in] The id of the pts queue.
- */
-int
-encoder_pts_clear(unsigned queueid) {
-	if(queueid >= MAX_PTS_QUEUE)
-		return -1;
-	pts_queue[queueid].clear();
-	return 0;
-}
-
-/**
- * Append a pts to ptv record into a pts queue.
- *
- * @param queueid [in] The id of the pts queue.
- * @param pts [in] The pts value.
- * @param ptv [in] The correspond ptv value for the \a pts.
- * @return 0 on success, or -1 on failure.
- */
-int
-encoder_pts_put(unsigned queueid, long long pts, struct timeval *ptv) {
-	encoder_pts_t p;
-	if(queueid >= MAX_PTS_QUEUE)
-		return -1;
-	p.pts = pts;
-	p.ptv = *ptv;
-	pts_queue[queueid].push_back(p);
-	return 0;
-}
-
-/**
- * Retrieve the ptv value for a given pts.
- *
- * @param queueid [in] The id of the pts queue.
- * @param pts [in] The pts value.
- * @param ptv [out] Store the retrieved ptv value.
- * @param interpolation [in] Use interpolation to get an approximate ptv value.
- * @return The \a ptv pointer if success, or NULL on failure.
- *
- * Note that the interpolation feature may be only required for audio packets.
- * The \a interpolation value should be the sample rate of audio frames.
- */
-struct timeval *
-encoder_ptv_get(unsigned queueid, long long pts, struct timeval *ptv, int interpolation) {
-	if(ptv == NULL)
-		return NULL;
-	if(queueid >= MAX_PTS_QUEUE)
-		return NULL;
-	while(pts_queue[queueid].size() > 0) {
-		if(pts > pts_queue[queueid].front().pts) {
-			pts_queue[queueid].pop_front();
-			continue;
-		}
-		if(pts_queue[queueid].front().pts == pts) {
-			*ptv = pts_queue[queueid].front().ptv;
-			pts_queue[queueid].pop_front();
-			return ptv;
-		}
-		if(interpolation > 0) {
-			long long delta_ts, delta_tv;
-			delta_ts = pts_queue[queueid].front().pts - pts;
-			delta_tv = (long long) (1.0 * delta_ts / interpolation);
-			*ptv = pts_queue[queueid].front().ptv;
-			ptv->tv_sec -= (delta_tv / 1000000LL);
-			delta_tv %= 1000000LL;
-			if(ptv->tv_usec < delta_tv) {
-				ptv->tv_sec--;
-				ptv->tv_usec += 1000000LL;
-			}
-			ptv->tv_usec -= delta_tv;
-			return ptv;
-		}
-		break;
-	}
-#if 1
-	ga_error("FIXME: encoder_ptv_get failed: id=%d, pts=%lld\n", queueid, pts);
-#endif
-	return NULL;
-}
-
 // encoder packet queue functions - for async packet delivery
 static int pktqueue_initqsize = -1;
 static int pktqueue_initchannels = -1;
@@ -442,7 +356,7 @@ encoder_pktqueue_init(int channels, int qsize) {
 }
 
 /**
- * Empty packets stored in all packet queues.
+ * Empty packets stored in the packet queue.
  */
 int
 encoder_pktqueue_reset() {
@@ -450,24 +364,13 @@ encoder_pktqueue_reset() {
 	if(pktqueue_initchannels <= 0)
 		return -1;
 	for(i = 0; i < pktqueue_initchannels; i++) {
-		encoder_pktqueue_reset_channel(i);
+		pthread_mutex_lock(&pktqueue[i].mutex);
+		pktlist[i].clear();
+		pktqueue[i].head = pktqueue[i].tail = 0;
+		pktqueue[i].datasize = 0;
+		pktqueue[i].bufsize = pktqueue_initqsize;
+		pthread_mutex_unlock(&pktqueue[i].mutex);
 	}
-	return 0;
-}
-
-/**
- * Empty packets stored in a single packet queue.
- *
- * @param channelId [in] Chennel id.
- */
-int
-encoder_pktqueue_reset_channel(int channelId) {
-	pthread_mutex_lock(&pktqueue[channelId].mutex);
-	pktlist[channelId].clear();
-	pktqueue[channelId].head = pktqueue[channelId].tail = 0;
-	pktqueue[channelId].datasize = 0;
-	pktqueue[channelId].bufsize = pktqueue_initqsize;
-	pthread_mutex_unlock(&pktqueue[channelId].mutex);
 	return 0;
 }
 
@@ -683,5 +586,23 @@ int
 encoder_pktqueue_unregister_callback(int channelId, qcallback_t cb) {
 	queue_cb[channelId].erase(cb);
 	return 0;
+}
+
+// find startcode
+unsigned char *
+ga_find_startcode(unsigned char *buf, unsigned char *end, int *startcode_len) {
+	unsigned char *ptr;
+	for(ptr = buf; ptr < end-4; ptr++) {
+		if(*ptr == 0 && *(ptr+1)==0) {
+			if(*(ptr+2) == 1) {
+				*startcode_len = 3;
+				return ptr;
+			} else if(*(ptr+2)==0 && *(ptr+3)==1) {
+				*startcode_len = 4;
+				return ptr;
+			}
+		}
+	}
+	return NULL;
 }
 

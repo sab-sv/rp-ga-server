@@ -478,11 +478,7 @@ public class GAClient {
 		if(audioFormat == null)
 			return null;
 		//
-		try {
 		adecoder = MediaCodec.createDecoderByType(audioFormat.getString(MediaFormat.KEY_MIME));
-		} catch(Exception e) {
-		return null;
-		}
 		if(adecoder == null)
 			return null;
 		adecoder.configure(audioFormat, null, null, 0);
@@ -597,11 +593,7 @@ public class GAClient {
 		if(videoFormat == null)
 			return null;
 		//
-		try {
 		vdecoder = MediaCodec.createDecoderByType(videoFormat.getString(MediaFormat.KEY_MIME));
-		} catch(Exception e) {
-		return null;
-		}
 		if(vdecoder == null)
 			return null;
 		try {
